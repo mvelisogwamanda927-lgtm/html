@@ -1,0 +1,783 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Universal App Builder V4</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #10121b;
+    color: white;
+}
+
+header {
+    background: #191d2b;
+    padding: 20px;
+    text-align: center;
+    border-bottom: 2px solid #6c63ff;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+header p {
+    color: #b9bfd1;
+    font-size: 13px;
+}
+
+.container {
+    padding: 15px;
+    max-width: 900px;
+    margin: auto;
+}
+
+.panel {
+    background: #1b2030;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+select, textarea {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #3c435b;
+    background: #101522;
+    color: white;
+    font-size: 15px;
+}
+
+textarea {
+    min-height: 250px;
+    resize: vertical;
+    font-family: monospace;
+    line-height: 1.5;
+}
+
+button {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: #6c63ff;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:active {
+    opacity: 0.75;
+}
+
+.buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.secondary {
+    background: #343b50;
+}
+
+.green {
+    background: #168c68;
+}
+
+.red {
+    background: #a9364b;
+}
+
+#status {
+    padding: 10px;
+    margin-top: 10px;
+    background: #101522;
+    border-radius: 8px;
+    color: #c5cce0;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.previewBox {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+iframe {
+    width: 100%;
+    height: 350px;
+    border: none;
+    background: white;
+}
+
+.small {
+    color: #aeb5ca;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    color: #8f96ad;
+    font-size: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>Universal App Builder V4</h1>
+    <p>Code Editor • Preview • Converter • Offline Tools</p>
+</header>
+
+<div class="container">
+
+<div class="panel">
+
+<label for="language">Choose your code language</label>
+
+<select id="language">
+    <option value="auto">Automatic Detection</option>
+    <option value="html">HTML</option>
+    <option value="javascript">JavaScript</option>
+    <option value="python">Python</option>
+    <option value="lua">Lua</option>
+    <option value="luau">Roblox Luau</option>
+    <option value="java">Java</option>
+    <option value="cpp">C++</option>
+</select>
+
+</div>
+
+<div class="panel">
+
+<label for="code">Paste your code here</label>
+
+<textarea id="code" spellcheck="false"
+placeholder="Paste your code here..."></textarea>
+
+<div class="buttons">
+
+<button onclick="detectLanguage()">Detect Language</button>
+
+<button onclick="runPreview()" class="green">
+Run / Preview
+</button>
+
+<button onclick="saveCode()" class="secondary">
+Save Code
+</button>
+
+<button onclick="downloadSource()" class="secondary">
+Download Code
+</button>
+
+<button onclick="convertCode()" class="secondary">
+Convert Code
+</button>
+
+<button onclick="clearCode()" class="red">
+Clear Code
+</button>
+
+</div>
+
+<div id="status">Ready. Paste your code to begin.</div>
+
+</div>
+
+<div class="panel">
+
+<label>Game / App Preview</label>
+
+<div class="previewBox">
+<iframe id="preview" title="App Preview"
+sandbox="allow-scripts allow-forms allow-modals"></iframe>
+</div>
+
+<p class="small">
+The preview supports HTML, CSS and JavaScript.
+Python, Lua, Luau, Java and C++ require their own runtime.
+</p>
+
+</div>
+
+<div class="panel">
+
+<label>Supported features</label>
+
+<p class="small">
+✔ HTML preview<br>
+✔ JavaScript preview<br>
+✔ Automatic language detection<br>
+✔ Basic code conversion<br>
+✔ Download your code<br>
+✔ Save code locally<br>
+✔ Offline editor<br>
+✔ Mobile-friendly interface
+</p>
+
+</div>
+
+</div>
+
+<footer>
+Universal App Builder V4 • Personal Project
+</footer>
+
+<script>
+"use strict";
+
+/* =========================================
+   ELEMENTS
+========================================= */
+
+const codeBox = document.getElementById("code");
+const languageBox = document.getElementById("language");
+const preview = document.getElementById("preview");
+const statusBox = document.getElementById("status");
+
+/* =========================================
+   STATUS
+========================================= */
+
+function setStatus(message) {
+    statusBox.textContent = message;
+}
+
+/* =========================================
+   LANGUAGE DETECTION
+========================================= */
+
+function detectLanguage() {
+
+    const code = codeBox.value.trim();
+
+    if (!code) {
+        setStatus("Please paste code first.");
+        return;
+    }
+
+    const detected = detectLanguageFromCode(code);
+
+    languageBox.value = detected;
+
+    setStatus("Detected language: " + detected.toUpperCase());
+}
+
+function detectLanguageFromCode(code) {
+
+    const text = code.trim();
+
+    if (
+        /<!DOCTYPE html/i.test(text) ||
+        /<html[\s>]/i.test(text) ||
+        /<body[\s>]/i.test(text)
+    ) {
+        return "html";
+    }
+
+    if (
+        /local\s+\w+\s*=/i.test(text) ||
+        /function\s+\w+\s*\([^)]*\)\s*[\r\n]*.*end/i.test(text) ||
+        /print\s*\(/i.test(text) && /\bnil\b/i.test(text)
+    ) {
+        if (
+            /game:GetService/i.test(text) ||
+            /Instance\.new/i.test(text) ||
+            /script\.Parent/i.test(text)
+        ) {
+            return "luau";
+        }
+
+        return "lua";
+    }
+
+    if (
+        /#include\s*<iostream>/i.test(text) ||
+        /std::cout/i.test(text) ||
+        /\bint\s+main\s*\(/i.test(text)
+    ) {
+        return "cpp";
+    }
+
+    if (
+        /public\s+static\s+void\s+main/i.test(text) ||
+        /System\.out\.println/i.test(text) ||
+        /\bclass\s+\w+/i.test(text) && /public\s+static/i.test(text)
+    ) {
+        return "java";
+    }
+
+    if (
+        /\bdef\s+\w+\s*\(/i.test(text) ||
+        /\bprint\s*\(/i.test(text) ||
+        /\bimport\s+\w+/i.test(text) ||
+        /\bNone\b/.test(text) ||
+        /\belif\b/.test(text)
+    ) {
+        return "python";
+    }
+
+    if (
+        /\b(const|let|var)\s+\w+/i.test(text) ||
+        /console\.log\s*\(/i.test(text) ||
+        /document\.getElementById/i.test(text) ||
+        /=>/.test(text)
+    ) {
+        return "javascript";
+    }
+
+    if (
+        /<style[\s>]/i.test(text) ||
+        /<script[\s>]/i.test(text)
+    ) {
+        return "html";
+    }
+
+    return "javascript";
+}
+
+/* =========================================
+   RUN / PREVIEW
+========================================= */
+
+function runPreview() {
+
+    const code = codeBox.value.trim();
+
+    if (!code) {
+        setStatus("Nothing to run. Paste your code first.");
+        return;
+    }
+
+    let language = languageBox.value;
+
+    if (language === "auto") {
+        language = detectLanguageFromCode(code);
+        languageBox.value = language;
+    }
+
+    if (language === "html") {
+
+        preview.srcdoc = code;
+
+        setStatus("HTML preview loaded.");
+
+        return;
+    }
+
+    if (language === "javascript") {
+
+        const safeHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+    font-family: Arial, sans-serif;
+    padding: 15px;
+    color: black;
+}
+</style>
+</head>
+<body>
+
+<h3>JavaScript Preview</h3>
+
+<div id="output"></div>
+
+<script>
+const output = document.getElementById("output");
+
+const originalLog = console.log;
+
+console.log = function(...args) {
+    output.innerHTML += args.map(value =>
+        String(value)
+    ).join(" ") + "<br>";
+
+    originalLog.apply(console, args);
+};
+
+try {
+${code}
+} catch(error) {
+    output.innerHTML +=
+        "<strong>Error:</strong> " + error.message;
+}
+<\/script>
+
+</body>
+</html>
+`;
+
+        preview.srcdoc = safeHTML;
+
+        setStatus("JavaScript preview loaded.");
+
+        return;
+    }
+
+    if (
+        language === "python" ||
+        language === "lua" ||
+        language === "luau" ||
+        language === "java" ||
+        language === "cpp"
+    ) {
+
+        preview.srcdoc = `
+<!DOCTYPE html>
+<html>
+<body style="font-family:Arial;padding:20px;color:#222">
+<h3>Runtime required</h3>
+<p>This language cannot run directly inside this HTML preview.</p>
+<p><b>Detected language:</b> ${language.toUpperCase()}</p>
+<p>Your code has not been deleted.</p>
+</body>
+</html>`;
+
+        setStatus(
+            language.toUpperCase() +
+            " requires a compatible runtime."
+        );
+
+        return;
+    }
+
+    setStatus("Unsupported language.");
+}
+
+/* =========================================
+   CODE CONVERSION
+========================================= */
+
+function convertCode() {
+
+    const code = codeBox.value.trim();
+
+    if (!code) {
+        setStatus("Paste code before converting.");
+        return;
+    }
+
+    let source = languageBox.value;
+
+    if (source === "auto") {
+        source = detectLanguageFromCode(code);
+        languageBox.value = source;
+    }
+
+    let result = "";
+    let target = "";
+
+    if (source === "lua" || source === "luau") {
+
+        target = "javascript";
+
+        result = code
+            .replace(/\blocal\s+/g, "let ")
+            .replace(/\bprint\s*\(/g, "console.log(")
+            .replace(/\bnil\b/g, "null")
+            .replace(/\btrue\b/g, "true")
+            .replace(/\bfalse\b/g, "false")
+            .replace(/~=/g, "!=")
+            .replace(/\.\./g, "+");
+
+        setStatus(
+            "Basic Lua conversion completed. Complex syntax may need manual fixing."
+        );
+    }
+
+    else if (source === "javascript") {
+
+        target = "html";
+
+        result = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Converted App</title>
+</head>
+<body>
+
+<h1>My App</h1>
+
+<script>
+${code}
+<\/script>
+
+</body>
+</html>`;
+
+        setStatus("JavaScript wrapped in HTML.");
+    }
+
+    else if (source === "html") {
+
+        const match = code.match(
+            /<script[^>]*>([\s\S]*?)<\/script>/i
+        );
+
+        if (!match) {
+            setStatus("No JavaScript script was found in this HTML.");
+            return;
+        }
+
+        target = "javascript";
+        result = match[1];
+
+        setStatus("Extracted JavaScript from HTML.");
+    }
+
+    else if (source === "python") {
+
+        target = "javascript";
+
+        result = code
+            .replace(/^\s*#.*$/gm, "")
+            .replace(/\bprint\s*\(/g, "console.log(")
+            .replace(/\bTrue\b/g, "true")
+            .replace(/\bFalse\b/g, "false")
+            .replace(/\bNone\b/g, "null");
+
+        setStatus(
+            "Basic Python conversion completed. Indentation and syntax may require manual changes."
+        );
+    }
+
+    else {
+
+        setStatus(
+            "This language does not have a built-in converter yet."
+        );
+
+        return;
+    }
+
+    codeBox.value = result;
+    languageBox.value = target;
+
+}
+
+/* =========================================
+   SAVE CODE
+========================================= */
+
+function saveCode() {
+
+    const code = codeBox.value;
+
+    if (!code.trim()) {
+        setStatus("Nothing to save.");
+        return;
+    }
+
+    try {
+
+        localStorage.setItem(
+            "universal_builder_code",
+            code
+        );
+
+        localStorage.setItem(
+            "universal_builder_language",
+            languageBox.value
+        );
+
+        setStatus("Code saved on this device.");
+
+    } catch(error) {
+
+        setStatus(
+            "Saving failed. Your browser may block local storage."
+        );
+    }
+}
+
+/* =========================================
+   DOWNLOAD SOURCE
+========================================= */
+
+function downloadSource() {
+
+    const code = codeBox.value;
+
+    if (!code.trim()) {
+        setStatus("Nothing to download.");
+        return;
+    }
+
+    let extension = "txt";
+
+    const language = languageBox.value;
+
+    if (language === "html") extension = "html";
+    if (language === "javascript") extension = "js";
+    if (language === "python") extension = "py";
+    if (language === "lua") extension = "lua";
+    if (language === "luau") extension = "luau";
+    if (language === "java") extension = "java";
+    if (language === "cpp") extension = "cpp";
+
+    downloadFile(
+        code,
+        "my_code." + extension,
+        "text/plain;charset=utf-8"
+    );
+}
+
+/* =========================================
+   DOWNLOAD HELPER
+========================================= */
+
+function downloadFile(content, filename, type) {
+
+    try {
+
+        const blob = new Blob(
+            [content],
+            { type: type }
+        );
+
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = filename;
+
+        document.body.appendChild(link);
+
+        link.click();
+
+        link.remove();
+
+        setTimeout(function() {
+            URL.revokeObjectURL(url);
+        }, 5000);
+
+        setStatus("Download started: " + filename);
+
+    } catch(error) {
+
+        setStatus(
+            "Download failed. Try opening this app in your browser."
+        );
+    }
+}
+
+/* =========================================
+   CLEAR
+========================================= */
+
+function clearCode() {
+
+    const confirmed = confirm(
+        "Are you sure you want to clear the editor?"
+    );
+
+    if (!confirmed) return;
+
+    codeBox.value = "";
+
+    preview.srcdoc = "";
+
+    languageBox.value = "auto";
+
+    setStatus("Editor cleared.");
+}
+
+/* =========================================
+   RESTORE SAVED CODE
+========================================= */
+
+window.addEventListener("load", function() {
+
+    try {
+
+        const savedCode = localStorage.getItem(
+            "universal_builder_code"
+        );
+
+        const savedLanguage = localStorage.getItem(
+            "universal_builder_language"
+        );
+
+        if (savedCode !== null) {
+
+            codeBox.value = savedCode;
+
+        }
+
+        if (savedLanguage !== null) {
+
+            languageBox.value = savedLanguage;
+
+        }
+
+        if (savedCode) {
+
+            setStatus("Previous saved code restored.");
+
+        }
+
+    } catch(error) {
+
+        setStatus("Ready. Paste your code to begin.");
+
+    }
+
+});
+
+/* =========================================
+   AUTOMATIC DETECTION
+========================================= */
+
+codeBox.addEventListener("input", function() {
+
+    if (languageBox.value === "auto") {
+
+        const code = codeBox.value.trim();
+
+        if (code.length > 20) {
+
+            const detected = detectLanguageFromCode(code);
+
+            setStatus(
+                "Possible language: " +
+                detected.toUpperCase()
+            );
+        }
+    }
+
+});
+
+</script>
+
+</body>
+</html>
